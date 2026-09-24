@@ -69,7 +69,7 @@ class DatasetStore:
             stored.analysis = analysis
             return stored
 
-    def review(self, dataset_id: str, expected_revision: int, decisions: dict[str, ProposalStatus]) -> ReviewSummary:
+    def review(self, dataset_id: str, expected_revision: int, decisions: dict[str, tuple[ProposalStatus, str | None]]) -> ReviewSummary:
         with self._lock:
             stored = self._items.get(dataset_id)
             if stored is None:
@@ -82,7 +82,7 @@ class DatasetStore:
             if any(proposal_id not in proposals for proposal_id in decisions):
                 raise LookupError("Review contains an unknown proposal.")
             proposed = list(proposals.values())
-            candidate_statuses = {proposal.id: decisions.get(proposal.id, proposal.status) for proposal in proposed}
+            candidate_statuses = {proposal.id: decisions.get(proposal.id, (proposal.status, None))[0] for proposal in proposed}
             accepted = [proposal for proposal in proposed if candidate_statuses[proposal.id] == ProposalStatus.ACCEPTED]
             cell_targets: set[tuple[str, str]] = set()
             excluded: set[str] = set()
@@ -96,8 +96,13 @@ class DatasetStore:
                     cell_targets.add(target)
             if any(proposal.row_id in excluded and proposal.action.value == "set_cell" for proposal in accepted):
                 raise RuntimeError("A row cannot be excluded and edited in the same review.")
-            changed = any(candidate_statuses[proposal.id] != proposal.status for proposal in proposed)
+            changed = any(candidate_statuses[proposal.id] != proposal.status or decisions.get(proposal.id, (proposal.status, None))[1] is not None for proposal in proposed)
             for proposal in proposed:
+                edited_value = decisions.get(proposal.id, (proposal.status, None))[1]
+                if edited_value is not None:
+                    if proposal.proposed_value is None:
+                        raise ValueError("Proposal does not support edited values.")
+                    proposal.proposed_value = edited_value
                 proposal.status = candidate_statuses[proposal.id]
             if changed:
                 stored.metadata.revision += 1

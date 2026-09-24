@@ -1,7 +1,7 @@
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
-from .config import settings
+from .config import cors_origins, settings
 from .csv_parser import CsvImportError, MAX_BYTES, parse_csv
 from .ai import FixtureAnalyzer, OpenAIAnalyzer, select_rows, validate_findings
 from .detection import analyze, apply_ai_findings
@@ -12,7 +12,7 @@ from fastapi.responses import Response
 app = FastAPI(title="ClearCSV API", version="0.1.0")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.web_url],
+    allow_origins=cors_origins(),
     allow_credentials=True,
     allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type"],
@@ -106,7 +106,7 @@ def get_analysis(dataset_id: str) -> dict[str, object]:
 
 @app.post("/api/datasets/{dataset_id}/review")
 def review_dataset(dataset_id: str, request: ReviewRequest) -> dict[str, object]:
-    decisions = {decision.proposal_id: decision.decision for decision in request.decisions}
+    decisions = {decision.proposal_id: (decision.decision, decision.proposed_value) for decision in request.decisions}
     try:
         summary = store.review(dataset_id, request.expected_revision, decisions)
     except KeyError as exc:

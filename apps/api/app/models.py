@@ -105,6 +105,7 @@ class ReviewSummary(BaseModel):
 class ReviewDecision(BaseModel):
     proposal_id: str
     decision: ProposalStatus
+    proposed_value: str | None = None
 
 
 class ReviewRequest(BaseModel):
