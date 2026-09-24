@@ -1,0 +1,11 @@
+{
+  "name": "clearcsv",
+  "private": true,
+  "packageManager": "pnpm@11.25.0",
+  "scripts": {
+    "dev:web": "pnpm --dir apps/web dev",
+    "build": "pnpm --dir apps/web build",
+    "typecheck": "pnpm --dir apps/web typecheck",
+    "test": "pnpm --dir apps/web test"
+  }
+}
